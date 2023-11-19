@@ -56,6 +56,8 @@ public:
 
     Hrodebert_db_result addValueToTable(std::string tableName, std::vector<ValueKey*> Values );
 
+    Hrodebert_db_result dropTable(std::string table);
+
 private:
     Hrodebert_db_result open();
     Hrodebert_db_result close();

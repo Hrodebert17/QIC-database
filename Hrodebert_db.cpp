@@ -2,7 +2,7 @@
 #include <string>
 #include <iostream>
 
-const int version[3] = {0,3,0};
+const int version[3] = {0,4,1};
 
 std::string hrodebert_db_version() {
     std::string version_str;
@@ -131,12 +131,46 @@ Hrodebert_db_result DataBase::addValueToTable(std::string tableName, std::vector
             }
             file << "}⨂" << std::endl;
             file.close();
+            return HB_SUCCESS;
         }
     }
 
     return HB_FAILED;
 }
 
+Hrodebert_db_result DataBase::dropTable(std::string table) {
+    // we open the file for input
+    file.close();
+    file.open(databasePosition,std::ios::in);
+    std::string fileLine;
+    std::string file_text;
+    bool deleting_smt = false;
+    while (std::getline(file,fileLine)) {
+        if (fileLine == table + ":") {
+            deleting_smt = true;
+        }
+        if (fileLine.ends_with(":" + table)) {
+            deleting_smt = true;
+        }
+        if (fileLine == "}" || fileLine == "}⨂") {
+            if (deleting_smt) {
+                deleting_smt = false;
+                continue;
+            }
+        }
+        if (!deleting_smt) {
+            file_text += fileLine;
+            file_text += "\n";
+        }
+
+    }
+    file.close();
+    file.open(databasePosition,std::ios::trunc);
+    file.close();
+    file.open(databasePosition,std::ios::out);
+    file << file_text;
+    return HB_SUCCESS;
+}
 
 
 ValueKey::ValueKey(dataType ptype) {
