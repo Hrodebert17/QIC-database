@@ -2,7 +2,7 @@
 #include <string>
 #include <iostream>
 
-const int version[3] = {0,4,1};
+const int version[3] = {0,5,3};
 
 std::string hrodebert_db_version() {
     std::string version_str;
@@ -68,7 +68,8 @@ Hrodebert_db_result DataBase::createTable(std::string tableName, std::vector<dat
     return HB_FAILED;
 }
 
-Hrodebert_db_result DataBase::addValueToTable(std::string tableName, std::vector<ValueKey *> Values) {
+Hrodebert_db_result DataBase::addValueToTable(std::string tableName, std::vector<ValueKey> Values) {
+    file.close();
     file.open(databasePosition,std::ios::in);
     std::string line;
     while (std::getline(file, line)) {
@@ -99,34 +100,24 @@ Hrodebert_db_result DataBase::addValueToTable(std::string tableName, std::vector
             file << "from-table:" << tableName << std::endl;
             file << "{" <<std::endl;
             for (int i = 0; i < Values.size(); i++) {
-                dataType type = Values.at(i)->getType();
+                dataType type = Values.at(i).getType();
                 if (type == Boolean && type == keys[i].getType()) {
-                    BoolValueKey* key = dynamic_cast<BoolValueKey*>(Values.at(i));
-                    if (key != nullptr) {
-                        file << "boolean:"<< key->value << std::endl;
-                        continue;
-                    }
+                    file << "boolean:"<< Values.at(i).get_bool_value() << std::endl;
+                    continue;
                 }
                 if (type == Integer && type == keys[i].getType()) {
-                    IntValueKey* key= dynamic_cast<IntValueKey*>(Values.at(i));
-                    if (key != nullptr) {
-                        file << "integer:"<< key->value << std::endl;
-                        continue;
-                    }
+                    file << "integer:"<< Values.at(i).get_int_value() << std::endl;
+                    continue;
                 }
                 if (type == Double && type == keys[i].getType()) {
-                    DoubleValueKey* key= dynamic_cast<DoubleValueKey*>(Values.at(i));
-                    if (key != nullptr) {
-                        file << "Double-:"<< key->value << std::endl;
-                        continue;
-                    }
+
+                    file << "Double-:"<< Values.at(i).get_double_value() << std::endl;
+                    continue;
                 }
                 if (type == String && type == keys[i].getType()) {
-                    StringValueKey* key= dynamic_cast<StringValueKey*>(Values.at(i));
-                    if (key != nullptr) {
-                        file << "String-:"<< key->value << std::endl;
-                        continue;
-                    }
+                    file << "String-:{\n";
+                    file << Values.at(i).get_string_value() << "\n}¦"<<std::endl;
+                    continue;
                 }
             }
             file << "}⨂" << std::endl;
@@ -169,26 +160,102 @@ Hrodebert_db_result DataBase::dropTable(std::string table) {
     file.close();
     file.open(databasePosition,std::ios::out);
     file << file_text;
+    file.close();
     return HB_SUCCESS;
 }
 
 
-ValueKey::ValueKey(dataType ptype) {
-    type = ptype;
+std::vector<std::vector<ValueKey>> DataBase::getAllValuesFromTable(std::string table) {
+    file.close();
+    file.open(databasePosition, std::ios::in);
+    std::string line;
+    std::vector<std::vector<ValueKey>> values;
+    bool saving_value = false;
+    while (std::getline(file,line)) {
+        if (line.ends_with(":" + table)) {
+            if (!saving_value) {
+                saving_value = true;
+                continue;
+            }
+        }
+        if (saving_value) {
+            bool savingAString = false;
+            std::vector<ValueKey> vector;
+            while (saving_value) {
+                if (savingAString) {
+                    std::string string_value;
+                    while (savingAString) {
+                        if (line != "}¦") {
+                            string_value +=line;
+                            std::cout << string_value << std::endl;
+                            std::getline(file,line);
+                        } else {
+                            ValueKey valueKey(String,static_cast<std::string>(string_value));
+                            vector.push_back(valueKey);
+                            savingAString = false;
+
+                        }
+                    }
+                }
+                if (line == "{") {
+                    std::getline(file,line);
+                    continue;
+                }
+                if (line.starts_with("boolean:")) {
+                    bool value = false;
+                    if (line[8] == '1') {
+                        value = true;
+                    }
+                    ValueKey valueKey(Boolean,value);
+                    vector.push_back(valueKey);
+
+                    std::getline(file,line);
+
+                }
+                if (line.starts_with("integer:")) {
+                    int value;
+                    std::string new_line;
+                    new_line = line;
+                    new_line.erase(0,8);
+                    value = std::stoi(new_line);
+                    ValueKey valueKey(Integer,value);
+                    vector.push_back(valueKey);
+
+                    std::getline(file,line);
+
+                }
+                if (line.starts_with("Double-:")) {
+                    double value;
+                    std::string new_line;
+                    new_line = line;
+                    new_line.erase(0,8);
+                    value = std::stod(new_line);
+                    ValueKey valueKey(Double,(double)value);
+                    vector.push_back(valueKey);
+
+                    std::getline(file,line);
+                }
+                if (line.starts_with("String-:{")) {
+                    savingAString = true;
+
+
+                }
+                if (line == "}⨂") {
+                    saving_value = false;
+                    values.push_back(vector);
+                    continue;
+                }
+                if (!std::getline(file,line)) {
+                    break;
+                }
+
+            }
+        }
+    }
+
+
+    file.close();
+    return values;
 }
 
-BoolValueKey::BoolValueKey(dataType ptype, bool avalue) : ValueKey(ptype) {
-    value = avalue;
-}
 
-StringValueKey::StringValueKey(dataType ptype1, std::string avalue) : ValueKey(ptype1) {
-    value = avalue;
-}
-
-IntValueKey::IntValueKey(dataType ptype, int avalue) : ValueKey(ptype) {
-    value = avalue;
-}
-
-DoubleValueKey::DoubleValueKey(dataType ptype, double avalue) : ValueKey(ptype) {
-    value = avalue;
-}

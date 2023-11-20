@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <utility>
 #include <vector>
 
 enum Hrodebert_db_result {
@@ -18,34 +19,33 @@ std::string hrodebert_db_version();
 
 class ValueKey {
 public:
-    ValueKey(dataType ptype);
-    virtual dataType getType() {return type;}
-protected:
+    ValueKey(dataType ptype): type(ptype) {};
+
+
+    ValueKey(dataType ptype, int value) : type(ptype) { this->set_int_value(value);};
+    ValueKey(dataType ptype, double value) : type(ptype) { this->set_double_value(value);};
+    ValueKey(dataType ptype, bool value) : type(ptype) { this->set_bool_value(value);};
+    ValueKey(dataType ptype, std::string value) : type(ptype) {this->set_string_value(value);};
+
+
+    dataType getType() {return type;}
+    void set_int_value(int value) {int_value = value;}
+    void set_double_value(double value) {double_Value = value;}
+    void set_bool_value(bool value) {boolean_val = value;}
+    void set_string_value(std::string value) {string_value = std::move(value);}
+
+
+    int get_int_value() {return int_value;}
+    bool get_bool_value() {return boolean_val;}
+    std::string get_string_value() {return string_value;}
+    double get_double_value() {return double_Value;}
+
+private:
     dataType type;
-};
-
-class BoolValueKey : public ValueKey{
-public:
-    BoolValueKey(dataType ptype, bool avalue);
-    bool value;
-};
-
-class StringValueKey : public ValueKey{
-public:
-    StringValueKey(dataType ptype1, std::string avalue);
-    std::string value;
-};
-
-class IntValueKey : public ValueKey{
-public:
-    IntValueKey(dataType ptype, int avalue);
-    int value;
-};
-
-class DoubleValueKey : public ValueKey{
-public:
-    DoubleValueKey(dataType ptype, double avalue);
-    double value;
+    bool boolean_val;
+    std::string string_value;
+    int int_value;
+    double double_Value;
 };
 
 class DataBase {
@@ -54,9 +54,10 @@ public:
 
     Hrodebert_db_result createTable(std::string tableName, std::vector<dataType> data );
 
-    Hrodebert_db_result addValueToTable(std::string tableName, std::vector<ValueKey*> Values );
+    Hrodebert_db_result addValueToTable(std::string tableName, std::vector<ValueKey> Values );
 
     Hrodebert_db_result dropTable(std::string table);
+    std::vector<std::vector<ValueKey>> getAllValuesFromTable(std::string table);
 
 private:
     Hrodebert_db_result open();
