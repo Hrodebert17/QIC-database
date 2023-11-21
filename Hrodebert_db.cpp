@@ -2,7 +2,7 @@
 #include <string>
 #include <iostream>
 
-const int version[3] = {0,5,3};
+const int version[3] = {0,6,0};
 
 std::string hrodebert_db_version() {
     std::string version_str;
@@ -106,6 +106,7 @@ Hrodebert_db_result DataBase::addValueToTable(std::string tableName, std::vector
                     continue;
                 }
                 if (type == Integer && type == keys[i].getType()) {
+                    std::cout << Values.at(i).get_int_value() << std::endl;
                     file << "integer:"<< Values.at(i).get_int_value() << std::endl;
                     continue;
                 }
@@ -258,4 +259,158 @@ std::vector<std::vector<ValueKey>> DataBase::getAllValuesFromTable(std::string t
     return values;
 }
 
+Hrodebert_db_result DataBase::eraseValuesFromTable(std::string table, std::vector<ValueKey> value) {
+    // we close the file if its open
+    if (file.is_open()) {
+        file.close();
+    }
+    // we open the file
+    file.open(databasePosition, std::ios::in);
+    // we cheek if the file is open
+    if (file.is_open()) {
+        std::string line;
+        std::string file_text;
+        std::string string_value = "";
+        std::string value_start = "from-table:" + table;
 
+        int i;
+        int f = 0;
+
+        int current_line = 0;
+
+        bool ignore_next_line = false;
+        bool deleting = false;
+
+        // while the file has lines
+        while (std::getline(file,line)) {
+            if (line != value_start && !deleting) {
+                file_text += line;
+                file_text += "\n";
+                current_line ++;
+                continue;
+            }
+            if (line == value_start) {
+                if (!deleting ) {
+                    if (!ignore_next_line) {
+                        deleting = true;
+                        string_value = "";
+                        i = 0;
+                        f = 1;
+                    } else {
+                        file_text += line;
+                        file_text += "\n";
+                        ignore_next_line = false;
+                        current_line ++;
+                    }
+                }
+            }
+
+            if (deleting) {
+                if (line == "{" || line == "}") {
+                    f++;
+                    continue;
+                }
+                if (line == "}⨂") {
+                    f++;
+                    deleting = false;
+                    current_line += f;
+                    continue;
+                }
+                if (line.starts_with("boolean:")) {
+                    if (value.at(i).getType() == Boolean) {
+                        int result = (value.at(i).get_bool_value()) ? 1 : 0;
+                        if ( result + '0'  == (line.at(8))) {
+                            i++;
+                            f++;
+                            continue;
+                        }
+                        std::cout << (int )(line.at(8)) <<std::endl;
+                        deleting = false;
+                    }
+                }
+                if (line.starts_with("String-:")) {
+                    if (value.at(i).getType() == String) {
+                        std::string str;
+                        std::string last_string;
+                        f++;
+                        while (line != "}¦" && std::getline(file,line)) {
+                            if (line != "}¦") {
+                                str += line;
+                                f++;
+                                last_string = str;
+                                str += "\n";
+                            } else {
+                                f++;
+                                str = last_string;
+                            }
+                        }
+                        if (str == value.at(i).get_string_value()) {
+                            i++;
+                            continue;
+                        }
+                        deleting = false;
+                    }
+                }
+                if (line.starts_with("integer:")) {
+                    if (value.at(i).getType() == Integer) {
+                        int integer_val;
+                        std::string str;
+                        str = line;
+                        str.erase(0,8);
+                        integer_val = std::stoi(str);
+                        if (integer_val == value.at(i).get_int_value()) {
+                            i++;
+                            f++;
+                            continue;
+                        }
+                        deleting = false;
+                    }
+                }
+                if (line.starts_with("Double-:")) {
+                    if (value.at(i).getType() == Double) {
+                        double dobule_val;
+                        std::string str;
+                        str = line;
+                        str.erase(0,8);
+                        dobule_val = std::stod(str);
+                        std::cout << dobule_val << std::endl;
+                        if (dobule_val == value.at(i).get_double_value()) {
+                            i++;
+                            f++;
+                            continue;
+                        }
+                        deleting = false;
+                    }
+                }
+                if (line != value_start) {
+                    i++;
+                }
+                if (!deleting) {
+                    ignore_next_line = true;
+                    file.close();
+                    file.open(databasePosition, std::ios::in);
+                    for (int q = 0; q < current_line; q++) {
+                        std::getline(file,line);
+                    }
+                    continue;
+                }
+
+
+            }
+        }
+        file.clear();
+        file.close();
+        file.open(databasePosition,  std::ios::trunc);
+        file.close();
+        file.open(databasePosition, std::ios::out);
+        if (file.is_open()) {
+            file << file_text;
+            file.close();
+            return HB_SUCCESS;
+        }
+        return HB_FAILED;
+    } else {
+        return HB_FAILED;
+    }
+    return HB_FAILED;
+}
