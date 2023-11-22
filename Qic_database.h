@@ -17,7 +17,7 @@ namespace QIC {
     };
 
 /*returns the version of the library*/
-    std::string hrodebert_db_version();
+    std::string Version();
 
     class Value {
     public:

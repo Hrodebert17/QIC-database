@@ -4,7 +4,7 @@
 
 const int version[3] = {0,9,0};
 
-std::string QIC::hrodebert_db_version() {
+std::string QIC::Version() {
     std::string version_str;
     version_str += std::to_string(version[0]);
     version_str += ".";
