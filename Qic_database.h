@@ -1,5 +1,5 @@
-#ifndef HRODEBERT_DB_HRODEBERT_DB_H
-#define HRODEBERT_DB_HRODEBERT_DB_H
+#ifndef HRODEBERT_DB_QIC_DATABASE_H
+#define HRODEBERT_DB_QIC_DATABASE_H
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -73,5 +73,5 @@ private:
     std::string databasePosition;
 };
 
-#endif //HRODEBERT_DB_HRODEBERT_DB_H
+#endif //HRODEBERT_DB_QIC_DATABASE_H
 
