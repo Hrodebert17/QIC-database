@@ -2,7 +2,7 @@
 #include <string>
 #include <iostream>
 
-const int version[3] = {0,8,0};
+const int version[3] = {0,8,1};
 
 std::string hrodebert_db_version() {
     std::string version_str;
@@ -106,7 +106,6 @@ Hrodebert_db_result DataBase::addValueToTable(std::string tableName, std::vector
                     continue;
                 }
                 if (type == Integer && type == keys[i].getType()) {
-                    std::cout << Values.at(i).get_int_value() << std::endl;
                     file << "integer:"<< Values.at(i).get_int_value() << std::endl;
                     continue;
                 }
@@ -188,7 +187,6 @@ std::vector<std::vector<ValueKey>> DataBase::getAllValuesFromTable(std::string t
                     while (savingAString) {
                         if (line != "}¦") {
                             string_value +=line;
-                            std::cout << string_value << std::endl;
                             std::getline(file,line);
                         } else {
                             ValueKey valueKey(String,static_cast<std::string>(string_value));
@@ -324,7 +322,6 @@ Hrodebert_db_result DataBase::eraseValuesFromTable(std::string table, std::vecto
                             f++;
                             continue;
                         }
-                        std::cout << (int )(line.at(8)) <<std::endl;
                         deleting = false;
                     }
                 }
@@ -373,7 +370,6 @@ Hrodebert_db_result DataBase::eraseValuesFromTable(std::string table, std::vecto
                         str = line;
                         str.erase(0,8);
                         dobule_val = std::stod(str);
-                        std::cout << dobule_val << std::endl;
                         if (dobule_val == value.at(i).get_double_value()) {
                             i++;
                             f++;
@@ -484,7 +480,6 @@ Hrodebert_db_result DataBase::eraseValuesFromTableWithLimit(std::string table, s
                             f++;
                             continue;
                         }
-                        std::cout << (int) (line.at(8)) << std::endl;
                         deleting = false;
                     }
                 }
@@ -533,7 +528,6 @@ Hrodebert_db_result DataBase::eraseValuesFromTableWithLimit(std::string table, s
                         str = line;
                         str.erase(0, 8);
                         dobule_val = std::stod(str);
-                        std::cout << dobule_val << std::endl;
                         if (dobule_val == value.at(i).get_double_value()) {
                             i++;
                             f++;
