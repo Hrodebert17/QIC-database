@@ -58,7 +58,12 @@ public:
 
     Hrodebert_db_result eraseValuesFromTable(std::string table, std::vector<ValueKey> value);
 
+    Hrodebert_db_result eraseValuesFromTableWithLimit(std::string table, std::vector<ValueKey> value, int limit);
+
+    Hrodebert_db_result flush();
+
     Hrodebert_db_result dropTable(std::string table);
+
     std::vector<std::vector<ValueKey>> getAllValuesFromTable(std::string table);
 
 private:
@@ -69,3 +74,4 @@ private:
 };
 
 #endif //HRODEBERT_DB_HRODEBERT_DB_H
+
