@@ -2,9 +2,9 @@
 #include <string>
 #include <iostream>
 
-const int version[3] = {0,8,1};
+const int version[3] = {0,9,0};
 
-std::string hrodebert_db_version() {
+std::string QIC::hrodebert_db_version() {
     std::string version_str;
     version_str += std::to_string(version[0]);
     version_str += ".";
@@ -14,33 +14,33 @@ std::string hrodebert_db_version() {
     return version_str;
 }
 
-DataBase::DataBase(std::string databaseName) {
+QIC::DataBase::DataBase(std::string databaseName) {
     databasePosition = databaseName;
 }
 
-Hrodebert_db_result DataBase::open() {
+QIC::Result QIC::DataBase::open() {
     file.open(databasePosition);
     if (file.is_open()) {
-        return HB_SUCCESS;
+        return QIC::Result::QIC_SUCCESS;
     }
-    return HB_FAILED;
+    return QIC::Result::QIC_SUCCESS;
 }
 
-Hrodebert_db_result DataBase::close() {
+QIC::Result QIC::DataBase::close() {
     if (file.is_open()) {
         file.close();
-        return HB_SUCCESS;
+        return QIC::Result::QIC_SUCCESS;
     }
-    return HB_FAILED;
+    return QIC::Result::QIC_SUCCESS;
 }
 
-Hrodebert_db_result DataBase::createTable(std::string tableName, std::vector<dataType> data) {
+QIC::Result QIC::DataBase::createTable(std::string tableName, std::vector<dataType> data) {
     file.open(databasePosition,std::ios::in);
     if (file.is_open()) {
         std::string line;
         while (std::getline(file, line)) {
             if (line == tableName + ":") {
-                return HB_FAILED;
+                return QIC::Result::QIC_SUCCESS;
             }
         }
         file.close();
@@ -63,32 +63,32 @@ Hrodebert_db_result DataBase::createTable(std::string tableName, std::vector<dat
         }
         file << "}" << std::endl;
         file.close();
-        return HB_SUCCESS;
+        return QIC::Result::QIC_SUCCESS;
     }
-    return HB_FAILED;
+    return QIC::Result::QIC_SUCCESS;
 }
 
-Hrodebert_db_result DataBase::addValueToTable(std::string tableName, std::vector<ValueKey> Values) {
+QIC::Result QIC::DataBase::addValueToTable(std::string tableName, std::vector<QIC::Value> Values) {
     file.close();
     file.open(databasePosition,std::ios::in);
     std::string line;
     while (std::getline(file, line)) {
         if (line == tableName + ":") {
             std::string NewLine;
-            std::vector<ValueKey> keys;
+            std::vector<QIC::Value> keys;
             while (std::getline(file, NewLine)) {
                 if (NewLine[0] != '}') {
                     if (NewLine[0] == '{') {
                         continue;
                     }
                     if (NewLine == "bool") {
-                        keys.push_back(ValueKey(Boolean));
+                        keys.push_back(QIC::Value(Boolean));
                     } else if (NewLine == "string") {
-                        keys.push_back(ValueKey(String));
+                        keys.push_back(QIC::Value(String));
                     } else if (NewLine == "integer") {
-                        keys.push_back(ValueKey(Integer));
+                        keys.push_back(QIC::Value(Integer));
                     } else if (NewLine == "double") {
-                        keys.push_back(ValueKey(Double));
+                        keys.push_back(QIC::Value(Double));
                     }
 
                 } else {
@@ -122,14 +122,14 @@ Hrodebert_db_result DataBase::addValueToTable(std::string tableName, std::vector
             }
             file << "}⨂" << std::endl;
             file.close();
-            return HB_SUCCESS;
+            return QIC::Result::QIC_SUCCESS;
         }
     }
 
-    return HB_FAILED;
+    return QIC::Result::QIC_SUCCESS;
 }
 
-Hrodebert_db_result DataBase::dropTable(std::string table) {
+QIC::Result QIC::DataBase::dropTable(std::string table) {
     // we open the file for input
     file.close();
     file.open(databasePosition,std::ios::in);
@@ -161,15 +161,15 @@ Hrodebert_db_result DataBase::dropTable(std::string table) {
     file.open(databasePosition,std::ios::out);
     file << file_text;
     file.close();
-    return HB_SUCCESS;
+    return QIC::Result::QIC_SUCCESS;
 }
 
 
-std::vector<std::vector<ValueKey>> DataBase::getAllValuesFromTable(std::string table) {
+std::vector<std::vector<QIC::Value>> QIC::DataBase::getAllValuesFromTable(std::string table) {
     file.close();
     file.open(databasePosition, std::ios::in);
     std::string line;
-    std::vector<std::vector<ValueKey>> values;
+    std::vector<std::vector<QIC::Value>> values;
     bool saving_value = false;
     while (std::getline(file,line)) {
         if (line.ends_with(":" + table)) {
@@ -180,7 +180,7 @@ std::vector<std::vector<ValueKey>> DataBase::getAllValuesFromTable(std::string t
         }
         if (saving_value) {
             bool savingAString = false;
-            std::vector<ValueKey> vector;
+            std::vector<QIC::Value> vector;
             while (saving_value) {
                 if (savingAString) {
                     std::string string_value;
@@ -189,8 +189,8 @@ std::vector<std::vector<ValueKey>> DataBase::getAllValuesFromTable(std::string t
                             string_value +=line;
                             std::getline(file,line);
                         } else {
-                            ValueKey valueKey(String,static_cast<std::string>(string_value));
-                            vector.push_back(valueKey);
+                            QIC::Value value(String,static_cast<std::string>(string_value));
+                            vector.push_back(value);
                             savingAString = false;
 
                         }
@@ -205,8 +205,8 @@ std::vector<std::vector<ValueKey>> DataBase::getAllValuesFromTable(std::string t
                     if (line[8] == '1') {
                         value = true;
                     }
-                    ValueKey valueKey(Boolean,value);
-                    vector.push_back(valueKey);
+                    QIC::Value Value(Boolean,value);
+                    vector.push_back(Value);
 
                     std::getline(file,line);
 
@@ -217,8 +217,8 @@ std::vector<std::vector<ValueKey>> DataBase::getAllValuesFromTable(std::string t
                     new_line = line;
                     new_line.erase(0,8);
                     value = std::stoi(new_line);
-                    ValueKey valueKey(Integer,value);
-                    vector.push_back(valueKey);
+                    QIC::Value Value(Integer,value);
+                    vector.push_back(Value);
 
                     std::getline(file,line);
 
@@ -229,8 +229,8 @@ std::vector<std::vector<ValueKey>> DataBase::getAllValuesFromTable(std::string t
                     new_line = line;
                     new_line.erase(0,8);
                     value = std::stod(new_line);
-                    ValueKey valueKey(Double,(double)value);
-                    vector.push_back(valueKey);
+                    QIC::Value Value(Double,(double)value);
+                    vector.push_back(Value);
 
                     std::getline(file,line);
                 }
@@ -257,7 +257,7 @@ std::vector<std::vector<ValueKey>> DataBase::getAllValuesFromTable(std::string t
     return values;
 }
 
-Hrodebert_db_result DataBase::eraseValuesFromTable(std::string table, std::vector<ValueKey> value) {
+QIC::Result QIC::DataBase::eraseValuesFromTable(std::string table, std::vector<QIC::Value> value) {
     // we close the file if its open
     if (file.is_open()) {
         file.close();
@@ -402,16 +402,16 @@ Hrodebert_db_result DataBase::eraseValuesFromTable(std::string table, std::vecto
         if (file.is_open()) {
             file << file_text;
             file.close();
-            return HB_SUCCESS;
+            return QIC::Result::QIC_SUCCESS;
         }
-        return HB_FAILED;
+        return QIC::Result::QIC_SUCCESS;
     } else {
-        return HB_FAILED;
+        return QIC::Result::QIC_SUCCESS;
     }
-    return HB_FAILED;
+    return QIC::Result::QIC_SUCCESS;
 }
 
-Hrodebert_db_result DataBase::eraseValuesFromTableWithLimit(std::string table, std::vector<ValueKey> value, int limit) {
+QIC::Result QIC::DataBase::eraseValuesFromTableWithLimit(std::string table, std::vector<QIC::Value> value, int limit) {
     // we close the file if its open
     if (file.is_open()) {
         file.close();
@@ -560,19 +560,19 @@ Hrodebert_db_result DataBase::eraseValuesFromTableWithLimit(std::string table, s
         if (file.is_open()) {
             file << file_text;
             file.close();
-            return HB_SUCCESS;
+            return QIC::Result::QIC_SUCCESS;
         }
-        return HB_FAILED;
+        return QIC::Result::QIC_SUCCESS;
     } else {
-        return HB_FAILED;
+        return QIC::Result::QIC_SUCCESS;
     }
-    return HB_FAILED;
+    return QIC::Result::QIC_SUCCESS;
 }
 
-Hrodebert_db_result DataBase::flush() {
+QIC::Result QIC::DataBase::flush() {
     file.close();
     file.open(databasePosition,std::ios::trunc | std::ios::out);
     file << "";
     file.close();
-    return HB_SUCCESS;
+    return QIC::Result::QIC_SUCCESS;
 }
