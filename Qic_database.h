@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-namespace QIC {
+namespace qic {
 
     enum Result {
         QIC_FAILED, QIC_SUCCESS
