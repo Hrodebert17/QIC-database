@@ -1,7 +1,7 @@
 #include "Qic_database.h"
 #include <iostream>
 
-const int version[3] = {0,9,2};
+const int version[3] = {0,9,3};
 
 std::string qic::Version() {
     std::string version_str;
@@ -34,11 +34,13 @@ qic::Result qic::DataBase::close() {
 }
 
 qic::Result qic::DataBase::createTable(std::string tableName, std::vector<dataType> data) {
-    file.open(databasePosition,std::ios::in);
+    file.close();
+    file.open(this->databasePosition,std::ios::in);
     if (file.is_open()) {
         std::string line;
         while (std::getline(file, line)) {
             if (line == tableName + ":") {
+                file.close();
                 return qic::Result::QIC_FAILED;
             }
         }
