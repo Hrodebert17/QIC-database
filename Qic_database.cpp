@@ -1,7 +1,7 @@
 #include "Qic_database.h"
 #include <iostream>
 
-const int version[3] = {0,9,1};
+const int version[3] = {0,9,2};
 
 std::string qic::Version() {
     std::string version_str;
@@ -22,7 +22,7 @@ qic::Result qic::DataBase::open() {
     if (file.is_open()) {
         return qic::Result::QIC_SUCCESS;
     }
-    return qic::Result::QIC_SUCCESS;
+    return qic::Result::QIC_FAILED;
 }
 
 qic::Result qic::DataBase::close() {
@@ -30,7 +30,7 @@ qic::Result qic::DataBase::close() {
         file.close();
         return qic::Result::QIC_SUCCESS;
     }
-    return qic::Result::QIC_SUCCESS;
+    return qic::Result::QIC_FAILED;
 }
 
 qic::Result qic::DataBase::createTable(std::string tableName, std::vector<dataType> data) {
@@ -39,7 +39,7 @@ qic::Result qic::DataBase::createTable(std::string tableName, std::vector<dataTy
         std::string line;
         while (std::getline(file, line)) {
             if (line == tableName + ":") {
-                return qic::Result::QIC_SUCCESS;
+                return qic::Result::QIC_FAILED;
             }
         }
         file.close();
@@ -64,7 +64,7 @@ qic::Result qic::DataBase::createTable(std::string tableName, std::vector<dataTy
         file.close();
         return qic::Result::QIC_SUCCESS;
     }
-    return qic::Result::QIC_SUCCESS;
+    return qic::Result::QIC_FAILED;
 }
 
 qic::Result qic::DataBase::addValueToTable(std::string tableName, std::vector<qic::Value> Values) {
@@ -125,7 +125,7 @@ qic::Result qic::DataBase::addValueToTable(std::string tableName, std::vector<qi
         }
     }
 
-    return qic::Result::QIC_SUCCESS;
+    return qic::Result::QIC_FAILED;
 }
 
 qic::Result qic::DataBase::dropTable(std::string table) {
@@ -403,11 +403,11 @@ qic::Result qic::DataBase::eraseValuesFromTable(std::string table, std::vector<q
             file.close();
             return qic::Result::QIC_SUCCESS;
         }
-        return qic::Result::QIC_SUCCESS;
+        return qic::Result::QIC_FAILED;
     } else {
-        return qic::Result::QIC_SUCCESS;
+        return qic::Result::QIC_FAILED;
     }
-    return qic::Result::QIC_SUCCESS;
+    return qic::Result::QIC_FAILED;
 }
 
 qic::Result qic::DataBase::eraseValuesFromTableWithLimit(std::string table, std::vector<qic::Value> value, int limit) {
@@ -561,11 +561,11 @@ qic::Result qic::DataBase::eraseValuesFromTableWithLimit(std::string table, std:
             file.close();
             return qic::Result::QIC_SUCCESS;
         }
-        return qic::Result::QIC_SUCCESS;
+        return qic::Result::QIC_FAILED;
     } else {
-        return qic::Result::QIC_SUCCESS;
+        return qic::Result::QIC_FAILED;
     }
-    return qic::Result::QIC_SUCCESS;
+    return qic::Result::QIC_FAILED;
 }
 
 qic::Result qic::DataBase::flush() {
