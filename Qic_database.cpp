@@ -1,7 +1,7 @@
 #include "Qic_database.h"
 #include <iostream>
 
-const int version[3] = {0,9,3};
+const int version[3] = {0,10,0};
 
 std::string qic::Version() {
     std::string version_str;
@@ -576,4 +576,31 @@ qic::Result qic::DataBase::flush() {
     file << "";
     file.close();
     return qic::Result::QIC_SUCCESS;
+}
+
+std::vector<std::string> qic::DataBase::getAllTables() {
+    std::vector<std::string> tableList;
+    file.close();
+    file.open(databasePosition,std::ios::in);
+    std::string line;
+    bool readingAString = false;
+    std::string upLine;
+    std::string table_name;
+    while (std::getline(file,line)) {
+        if (line.ends_with(":") && !upLine.starts_with("String-:{") && !readingAString) {
+            table_name = line;
+            table_name.erase(table_name.size() - 1,table_name.size() - 1);
+            tableList.push_back(table_name);
+        }
+        if (line.starts_with("String-:{")) {
+            readingAString = true;
+        }
+        if (readingAString) {
+            if (line.starts_with("}¦")) {
+                readingAString = false;
+            }
+        }
+        upLine = line;
+    }
+    return tableList;
 }

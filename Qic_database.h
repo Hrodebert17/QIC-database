@@ -76,6 +76,7 @@ namespace qic {
 
         Result flush();
 
+        std::vector<std::string> getAllTables();
 
         std::vector<std::vector<Value>> getAllValuesFromTable(std::string table);
 
