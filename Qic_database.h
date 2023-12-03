@@ -1,5 +1,5 @@
-#ifndef HRODEBERT_DB_QIC_DATABASE_H
-#define HRODEBERT_DB_QIC_DATABASE_H
+#ifndef QIC_DATABASE_H
+#define QIC_DATABASE_H
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -68,21 +68,24 @@ namespace qic {
 
         explicit DataBase(std::string databaseName) : databasePosition(std::move(databaseName)) {}
 
-        //TODO convert all of the functions to work whit the new system
-/*
-        Result createTable(std::string tableName, std::vector<dataType> data); //not converted
+        std::vector<std::string> getAllTables();
 
+        Result createTable(std::string tableName, std::vector<dataType> data);
+
+        Result dropTable(std::string table);
+
+        Result flush();
+
+//TODO convert all of the functions to work whit the new system
+
+/*
         Result addValueToTable(std::string tableName, std::vector<Value> Values);//not converted
 
-        Result dropTable(std::string table);//not converted
 
         Result eraseValuesFromTable(std::string table, std::vector<Value> value);//not converted
 
         Result eraseValuesFromTableWithLimit(std::string table, std::vector<Value> value, int limit);//not converted
 
-        Result flush();//not converted
-
-        std::vector<std::string> getAllTables();//not converted
 
         std::vector<std::vector<Value>> getAllValuesFromTable(std::string table);//not converted
 */
@@ -94,5 +97,5 @@ namespace qic {
         std::vector<std::string> file_position;
     };
 }
-#endif //HRODEBERT_DB_QIC_DATABASE_H
+#endif //QIC_DATABASE_H
 

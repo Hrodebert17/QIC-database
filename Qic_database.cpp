@@ -3,7 +3,7 @@
 #include <fstream>
 #include <filesystem>
 
-const int version[3] = {0,11,0};
+const int version[3] = {0,10,0};
 
 std::string qic::Version() {
     std::string version_str;
@@ -139,8 +139,86 @@ qic::Result qic::DataBase::close() {
         file.write(tables.c_str(),tables.size());
         file.write(values.c_str(),values.size());
         file.close();
+        this->opened = false;
+        return qic::Result::QIC_SUCCESS;
     }
     return qic::Result::QIC_FAILED;
+}
+
+qic::Result qic::DataBase::createTable(std::string tableName, std::vector<dataType> data) {
+    if (!this->opened) {
+        return qic::QIC_FAILED;
+    }
+    for (int i = 0; i < this->file_position.size(); i++) {
+        if (file_position.at(i) == tableName + ".qic") {
+            return qic::QIC_FAILED;
+        }
+    }
+    if (!tableName.contains("}") && !tableName.contains("{") && !tableName.contains(" ")) {
+        std::string table;
+        table += "table-";
+        table += tableName;
+        table += " {";
+        for (int i = 0; i < data.size(); i++) {
+            table += "\n";
+            if (data.at(i) == qic::dataType::String) {table += "String";}
+            if (data.at(i) == qic::dataType::Integer) {table += "int";}
+            if (data.at(i) == qic::dataType::Double) {table += "double";}
+            if (data.at(i) == qic::dataType::Boolean) {table += "Bool";}
+        }
+        table += "\n";
+        table += "};";
+        std::ofstream newTableFile(tableName + ".qic");
+        newTableFile.write(table.c_str(),table.size());
+        newTableFile.close();
+        this->file_position.push_back(tableName + ".qic");
+        return qic::QIC_SUCCESS;
+    } else {
+        return qic::QIC_FAILED;
+    }
+
+}
+
+qic::Result qic::DataBase::dropTable(std::string table) {
+    if (!this->opened) {
+        return qic::QIC_FAILED;
+    }
+    for (int i = 0; i < this->file_position.size(); i++) {
+        if (this->file_position.at(i) == table + ".qic") {
+            if (std::filesystem::remove(this->file_position.at(i))) {
+                this->file_position.erase(this->file_position.begin() + i);
+                return qic::QIC_SUCCESS;
+            }
+        }
+    }
+    return qic::QIC_FAILED;
+}
+
+qic::Result qic::DataBase::flush() {
+    std::string blankDatabase;
+    blankDatabase += "Tables {\n}\nValues {\n}-end_Values";
+    file.open(this->databasePosition,std::ios::trunc | std::ios::out);
+    if (file.is_open()) {
+        file.write(blankDatabase.c_str(), blankDatabase.size());
+        file.close();
+        for (int i = 0; i < this->file_position.size(); i++) {
+            std::filesystem::remove(this->file_position.at(i));
+        }
+        file_position.clear();
+        return qic::QIC_SUCCESS;
+    }
+    return qic::QIC_FAILED;
+}
+
+std::vector<std::string> qic::DataBase::getAllTables() {
+    std::vector<std::string> tables;
+    std::string table;
+    for (int i = 0; i < this->file_position.size(); i++) {
+        table = file_position.at(i);
+        table.erase(table.size() - 4,4);
+        tables.push_back(table);
+    }
+    return tables;
 }
 
 
