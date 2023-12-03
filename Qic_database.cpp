@@ -31,6 +31,7 @@ qic::Result qic::DataBase::open() {
             }
             if (line.starts_with("Values {")) {
                 readingValue = true;
+                continue;
             }
             if (readingTable) {
                 if (line.starts_with("table-") && line.ends_with("{") && !scanningTable) {
@@ -84,6 +85,7 @@ qic::Result qic::DataBase::open() {
             newDbFile.write("Tables {\n}\n", std::string("Tables {\n}\n").size());
             newDbFile.write("Values {\n}", std::string("Values {\n}").size());
             newDbFile.close();
+            this->opened = true;
             return qic::Result::QIC_SUCCESS;
         }
     }
@@ -219,6 +221,89 @@ std::vector<std::string> qic::DataBase::getAllTables() {
         tables.push_back(table);
     }
     return tables;
+}
+
+qic::Result qic::DataBase::addValueToTable(std::string tableName, std::vector<Value> Values) {
+    if (this->opened) {
+        for (int i = 0; i < this->file_position.size(); i++) {
+            if (file_position.at(i) == tableName + ".qic") {
+                std::string insertion;
+                insertion += "\nfrom-" + tableName + " {";
+                std::string line;
+                std::fstream inOutFile(file_position.at(i),std::ios::in);
+                bool scanningTableAcceptedValues = false;
+                std::vector<qic::dataType> acceptedData;
+                while (std::getline(inOutFile,line)) {
+                    if (line == "table-" + tableName) {
+                        scanningTableAcceptedValues = true;
+                    }
+                    if (scanningTableAcceptedValues) {
+                        if (line.starts_with("Bool")) {
+                            acceptedData.push_back(qic::Boolean);
+                            continue;
+                        }
+                        if (line.starts_with("double")) {
+                            acceptedData.push_back(qic::Double);
+                            continue;
+                        }
+                        if (line.starts_with("int")) {
+                            acceptedData.push_back(qic::Integer);
+                            continue;
+                        }
+                        if (line.starts_with("String")) {
+                            acceptedData.push_back(qic::String);
+                            continue;
+                        }
+                    }
+                    if (scanningTableAcceptedValues && line.starts_with("};") ) {
+                        inOutFile.close();
+                        break;
+                    }
+                }
+                if (acceptedData.size() == Values.size()) {
+                    for (int j = 0; j < acceptedData.size(); j++ ) {
+                        if (acceptedData.at(j) != Values.at(j).getType()) {
+                            return qic::QIC_FAILED;
+                        }
+                    }
+                }
+                for (int j = 0; j <Values.size(); j++) {
+                    insertion += "\n";
+                    if (Values.at(j).getType() == String) {
+                        if (Values.at(j).get_string_value().contains("}.")) {
+                            return qic::QIC_FAILED;
+                        }
+                        insertion += Values.at(j).get_string_value();
+                        insertion += "\n";
+                        insertion += "}.";
+                        continue;
+                    }
+                    if (Values.at(j).getType() == Boolean) {
+                        insertion += "b:";
+                        insertion += std::to_string(Values.at(j).get_bool_value());
+                    }
+                    if (Values.at(j).getType() == Double) {
+                        insertion += "d:";
+                        insertion += std::to_string(Values.at(j).get_double_value());
+                    }
+                    if (Values.at(j).getType() == Integer) {
+                        insertion += "i:";
+                        insertion += std::to_string(Values.at(j).get_int_value());
+                    }
+                }
+                insertion += "\n";
+                insertion += "}";
+                inOutFile.close();
+                inOutFile.open(this->file_position.at(i),std::ios::out | std::ios::app);
+                if (inOutFile.is_open()) {
+                    inOutFile.write(insertion.c_str(), insertion.size());
+                }
+                inOutFile.close();
+                return qic::QIC_SUCCESS;
+            }
+        }
+    }
+    return qic::QIC_FAILED;
 }
 
 

@@ -1,5 +1,5 @@
-#ifndef QIC_DATABASE_H
-#define QIC_DATABASE_H
+#ifndef HRODEBERT_DB_QIC_DATABASE_H
+#define HRODEBERT_DB_QIC_DATABASE_H
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -76,11 +76,11 @@ namespace qic {
 
         Result flush();
 
+        Result addValueToTable(std::string tableName, std::vector<Value> Values);// WORK IN PROGRESS
+
 //TODO convert all of the functions to work whit the new system
 
 /*
-        Result addValueToTable(std::string tableName, std::vector<Value> Values);//not converted
-
 
         Result eraseValuesFromTable(std::string table, std::vector<Value> value);//not converted
 
@@ -97,5 +97,5 @@ namespace qic {
         std::vector<std::string> file_position;
     };
 }
-#endif //QIC_DATABASE_H
+#endif //HRODEBERT_DB_QIC_DATABASE_H
 
