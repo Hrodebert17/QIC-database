@@ -62,31 +62,36 @@ namespace qic {
 
     class DataBase {
     public:
-        DataBase(std::string databaseName);
+        Result open(); // TODO: this function should open the database, scan it and separate each table in different files (qic extension) it should also put the path of those file in a vector to make the merge easier
 
-        Result createTable(std::string tableName, std::vector<dataType> data);
+        Result close(); //TODO: this function should merge all the changes into the database file and delete all the temporary files whit qic extension
 
-        Result addValueToTable(std::string tableName, std::vector<Value> Values);
+        explicit DataBase(std::string databaseName) : databasePosition(std::move(databaseName)) {}
 
-        Result dropTable(std::string table);
+        //TODO convert all of the functions to work whit the new system
+/*
+        Result createTable(std::string tableName, std::vector<dataType> data); //not converted
 
-        Result eraseValuesFromTable(std::string table, std::vector<Value> value);
+        Result addValueToTable(std::string tableName, std::vector<Value> Values);//not converted
 
-        Result eraseValuesFromTableWithLimit(std::string table, std::vector<Value> value, int limit);
+        Result dropTable(std::string table);//not converted
 
-        Result flush();
+        Result eraseValuesFromTable(std::string table, std::vector<Value> value);//not converted
 
-        std::vector<std::string> getAllTables();
+        Result eraseValuesFromTableWithLimit(std::string table, std::vector<Value> value, int limit);//not converted
 
-        std::vector<std::vector<Value>> getAllValuesFromTable(std::string table);
+        Result flush();//not converted
+
+        std::vector<std::string> getAllTables();//not converted
+
+        std::vector<std::vector<Value>> getAllValuesFromTable(std::string table);//not converted
+*/
 
     private:
-        Result open();
-
-        Result close();
-
+        bool opened = false;
         std::fstream file;
         std::string databasePosition;
+        std::vector<std::string> file_position;
     };
 }
 #endif //HRODEBERT_DB_QIC_DATABASE_H
