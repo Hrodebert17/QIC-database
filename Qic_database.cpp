@@ -3,7 +3,7 @@
 #include <fstream>
 #include <filesystem>
 
-const int version[3] = {0,10,0};
+const int version[3] = {0,11,0};
 
 std::string qic::Version() {
     std::string version_str;
@@ -112,7 +112,7 @@ qic::Result qic::DataBase::close() {
                     if (scanningTable) {
                         tables += line;
                         tables += "\n";
-                        if (line.ends_with("}")) {
+                        if (line.ends_with("};")) {
                             scanningTable = false;
                         }
                     }
@@ -132,6 +132,7 @@ qic::Result qic::DataBase::close() {
                 }
             }
             inputFile.close();
+            std::filesystem::remove(file_position.at(i));
         }
         tables +="}\n";
         values += "}-end_Values";

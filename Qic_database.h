@@ -62,9 +62,9 @@ namespace qic {
 
     class DataBase {
     public:
-        Result open(); // TODO: this function should open the database, scan it and separate each table in different files (qic extension) it should also put the path of those file in a vector to make the merge easier
+        Result open();
 
-        Result close(); //TODO: this function should merge all the changes into the database file and delete all the temporary files whit qic extension
+        Result close();
 
         explicit DataBase(std::string databaseName) : databasePosition(std::move(databaseName)) {}
 
