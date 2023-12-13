@@ -3,7 +3,7 @@
 #include <fstream>
 #include <filesystem>
 
-const int version[3] = {0,10,0};
+const int version[3] = {0,10,1};
 
 std::string qic::Version() {
     std::string version_str;
@@ -273,6 +273,8 @@ qic::Result qic::DataBase::addValueToTable(std::string tableName, std::vector<Va
                         if (Values.at(j).get_string_value().contains("}.")) {
                             return qic::QIC_FAILED;
                         }
+                        insertion += "s:";
+                        insertion += "\n";
                         insertion += "-" + Values.at(j).get_string_value();
                         insertion += "\n";
                         insertion += "}.";
@@ -315,6 +317,8 @@ qic::Result qic::DataBase::eraseValuesFromTable(std::string table, std::vector<V
             if (value.at(j).get_string_value().contains("}.")) {
                 return qic::QIC_FAILED;
             }
+            insertion += "s:";
+            insertion += "\n";
             insertion += "-" + value.at(j).get_string_value();
             insertion += "\n";
             insertion += "}.";
@@ -380,4 +384,152 @@ qic::Result qic::DataBase::eraseValuesFromTable(std::string table, std::vector<V
     return qic::QIC_FAILED;
 }
 
+qic::Result qic::DataBase::eraseValuesFromTableWithLimit(std::string table, std::vector<Value> value, int limit) {
+    std::string insertion;
+    insertion += "\nfrom-" + table + " {";
+    for (int j = 0; j <value.size(); j++) {
+        insertion += "\n";
+        if (value.at(j).getType() == String) {
+            if (value.at(j).get_string_value().contains("}.")) {
+                return qic::QIC_FAILED;
+            }
+            insertion += "s:";
+            insertion += "\n";
+            insertion += "-" + value.at(j).get_string_value();
+            insertion += "\n";
+            insertion += "}.";
+            continue;
+        }
+        if (value.at(j).getType() == Boolean) {
+            insertion += "b:";
+            insertion += std::to_string(value.at(j).get_bool_value());
+        }
+        if (value.at(j).getType() == Double) {
+            insertion += "d:";
+            insertion += std::to_string(value.at(j).get_double_value());
+        }
+        if (value.at(j).getType() == Integer) {
+            insertion += "i:";
+            insertion += std::to_string(value.at(j).get_int_value());
+        }
+    }
+    insertion += "\n";
+    insertion += "}";
+    std::vector<std::string> tables = this->getAllTables();
+    for (int i = 0; i < tables.size(); i++) {
+        if (tables.at(i) == table) {
+            std::string line;
+            std::ifstream inFile{table + ".qic"};
+            std::string newFile,compareLine;
+            std::string lastLine;
+            while (std::getline(inFile,line)) {
+                if (line == "from-" + table + " {") {
+                    std::string tmpValue;
+                    tmpValue += "from-" + table + " {";
+                    std::istringstream compare(insertion);
+                    bool matches = true;
+                    std::getline(compare, compareLine);
+                    std::getline(compare, compareLine);
+                    for (int j = 2; std::getline(inFile, line) && std::getline(compare, compareLine); j++) {
+                        if (line != compareLine) {
+                            matches = false;
+                            limit--;
+                        }
+                        tmpValue += "\n";
+                        tmpValue += line;
+                        line = "";
+                    }
+                    if (!matches || limit > 0) {
+                        newFile += "\n";
+                        newFile += tmpValue;
+                        continue;
+                    }
 
+                }
+                if (lastLine != "") {
+                    newFile += "\n";
+                }
+                newFile += line;
+                lastLine = line;
+            }
+            inFile.close();
+            std::ofstream outFIle{table + ".qic",std::ios::trunc};
+            outFIle.write(newFile.c_str(),newFile.size());
+            return qic::QIC_SUCCESS;
+        }
+    }
+    return qic::QIC_FAILED;
+}
+
+
+std::vector<std::vector<qic::Value>> qic::DataBase::getAllValuesFromTable(std::string table) {
+    std::vector<std::string> tablesList = this->getAllTables();
+    std::vector<std::vector<qic::Value>> finalVec;
+    for (int i = 0; i < tablesList.size(); i++ ) {
+        if (tablesList.at(i) == table) {
+            std::ifstream inFile{table + ".qic"};
+            bool scanningTable = false;
+            bool alredyScannedTable = false;
+            bool scanningValues = false;
+            std::string line;
+            while (std::getline(inFile,line)) {
+                if (line == "table-" + table  + " {") {
+                    if (!alredyScannedTable) {
+                        alredyScannedTable = true;
+                        scanningTable = true;
+                    }
+                }
+                if (scanningTable) {
+                    if (line == "};") {
+                        scanningTable = false;
+                    }
+                } else {
+                    // get the values here
+                    if (line == "from-" + table + " {") {
+                        std::vector<qic::Value> values;
+                        //we go to the next line and we start analyzing
+                        while (std::getline(inFile,line)) {
+                            if (line.starts_with("b:")) {
+                                values.push_back(qic::Value(Boolean,(line.at(2) == '1')));
+                                continue;
+                            }
+                            if (line.starts_with("i:")) {
+                                line.erase(0,2);
+                                values.push_back(qic::Value(Integer,std::stoi(line)));
+                                continue;
+                            }
+                            if (line.starts_with("d:")) {
+                                line.erase(0,2);
+                                values.push_back(qic::Value(Double,std::stod(line)));
+                                continue;
+                            }
+                            if (line.starts_with("s:")) {
+                                //scans the string.
+                                std::string storedString;
+                                int index = 0;
+                                while (std::getline(inFile,line)) {
+                                    if (line.starts_with("}.")) {
+                                        break;
+                                    }
+                                    line.erase(0,1);
+                                    if (index != 0) {
+                                        storedString += "\n";
+                                    }
+                                    storedString += line;
+                                    index++;
+                                }
+                                values.push_back(qic::Value(String,storedString));
+                                continue;
+                            }
+                            if (line.starts_with("}")) {
+                                finalVec.push_back(values);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            return finalVec;
+        }
+    }
+}

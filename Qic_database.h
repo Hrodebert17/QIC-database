@@ -78,19 +78,13 @@ namespace qic {
 
         Result addValueToTable(std::string tableName, std::vector<Value> Values);
 
-        Result eraseValuesFromTable(std::string table, std::vector<Value> value);//converted!!!!
+        Result eraseValuesFromTable(std::string table, std::vector<Value> value);
+
+        Result eraseValuesFromTableWithLimit(std::string table, std::vector<Value> value, int limit);
+
+        std::vector<std::vector<Value>> getAllValuesFromTable(std::string table);
 
 
-//TODO convert all of the functions to work whit the new system
-
-/*
-
-
-        Result eraseValuesFromTableWithLimit(std::string table, std::vector<Value> value, int limit);//not converted
-
-
-        std::vector<std::vector<Value>> getAllValuesFromTable(std::string table);//not converted
-*/
 
     private:
         bool opened = false;
