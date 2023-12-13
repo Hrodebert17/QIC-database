@@ -3,7 +3,7 @@
 #include <fstream>
 #include <filesystem>
 
-const int version[3] = {0,10,1};
+const int version[3] = {0,10,2};
 
 std::string qic::Version() {
     std::string version_str;
@@ -378,6 +378,7 @@ qic::Result qic::DataBase::eraseValuesFromTable(std::string table, std::vector<V
             inFile.close();
             std::ofstream outFIle{table + ".qic",std::ios::trunc};
             outFIle.write(newFile.c_str(),newFile.size());
+            outFIle.close();
             return qic::QIC_SUCCESS;
         }
     }
@@ -455,6 +456,7 @@ qic::Result qic::DataBase::eraseValuesFromTableWithLimit(std::string table, std:
             inFile.close();
             std::ofstream outFIle{table + ".qic",std::ios::trunc};
             outFIle.write(newFile.c_str(),newFile.size());
+            outFIle.close();
             return qic::QIC_SUCCESS;
         }
     }
