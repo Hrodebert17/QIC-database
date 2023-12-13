@@ -3,7 +3,7 @@
 #include <fstream>
 #include <filesystem>
 
-const int version[3] = {0,10,2};
+const int version[3] = {0,10,3};
 
 std::string qic::Version() {
     std::string version_str;
@@ -434,15 +434,19 @@ qic::Result qic::DataBase::eraseValuesFromTableWithLimit(std::string table, std:
                     for (int j = 2; std::getline(inFile, line) && std::getline(compare, compareLine); j++) {
                         if (line != compareLine) {
                             matches = false;
-                            limit--;
                         }
                         tmpValue += "\n";
                         tmpValue += line;
                         line = "";
                     }
-                    if (!matches || limit > 0) {
+                    if (!matches) {
                         newFile += "\n";
                         newFile += tmpValue;
+                        continue;
+                    } else if (limit == 0) {
+                        newFile += "\n";
+                        newFile += tmpValue;
+                        limit --;
                         continue;
                     }
 
