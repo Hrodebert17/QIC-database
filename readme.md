@@ -16,6 +16,6 @@ To use Q.I.C, you need to follow these simple steps:
 
 1. **Download**: Grab the desired version from the [GitHub repository](https://github.com/qic/qic)⁶[6].
 2. **Installation**: Link the library to your compiler using the instructions provided in the README file.
-3. **Documentation**: Explore our comprehensive documentation with clear examples and explanations. You can find it [here](https://qic.github.io/docs/).
+3. **Documentation**: Explore our comprehensive documentation with clear examples and explanations. You can find it [here](https://app.gitbook.com/o/A5wnxWM7qnjBT0zhApcu/s/JZvE6bhzTSCjbhAeWh4O/).
 
 That's it! You are now ready to use Q.I.C in your C++ projects. Enjoy! 😊
