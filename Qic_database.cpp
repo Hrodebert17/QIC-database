@@ -538,4 +538,5 @@ std::vector<std::vector<qic::Value>> qic::DataBase::getAllValuesFromTable(std::s
             return finalVec;
         }
     }
+    return finalVec;
 }
