@@ -23,7 +23,6 @@ qic::Result qic::DataBase::open() {
         bool scanningTable = false;
         std::string table_name;
         std::ofstream tableFile;
-        bool scanningValue = false;
         bool readingValue = false;
         while (std::getline(file,line)) {
             if (line.starts_with("Tables {")) {
@@ -98,7 +97,7 @@ qic::Result qic::DataBase::close() {
         std::string tables = "Tables {\n";
         std::string values = "Values {\n";
         std::ifstream inputFile;
-        for (int i = 0; i < file_position.size(); i++) {
+        for (std::size_t i = 0; i < file_position.size(); i++) {
             inputFile.open(file_position.at(i));
             if (inputFile.is_open(),std::ios::in) {
                 std::string line;
@@ -151,7 +150,7 @@ qic::Result qic::DataBase::createTable(std::string tableName, std::vector<dataTy
     if (!this->opened) {
         return qic::QIC_FAILED;
     }
-    for (int i = 0; i < this->file_position.size(); i++) {
+    for (std::size_t i = 0; i < this->file_position.size(); i++) {
         if (file_position.at(i) == tableName + ".qic") {
             return qic::QIC_FAILED;
         }
@@ -161,7 +160,7 @@ qic::Result qic::DataBase::createTable(std::string tableName, std::vector<dataTy
         table += "table-";
         table += tableName;
         table += " {";
-        for (int i = 0; i < data.size(); i++) {
+        for (std::size_t i = 0; i < data.size(); i++) {
             table += "\n";
             if (data.at(i) == qic::dataType::String) {table += "String";}
             if (data.at(i) == qic::dataType::Integer) {table += "int";}
@@ -185,7 +184,7 @@ qic::Result qic::DataBase::dropTable(std::string table) {
     if (!this->opened) {
         return qic::QIC_FAILED;
     }
-    for (int i = 0; i < this->file_position.size(); i++) {
+    for (std::size_t i = 0; i < this->file_position.size(); i++) {
         if (this->file_position.at(i) == table + ".qic") {
             if (std::filesystem::remove(this->file_position.at(i))) {
                 this->file_position.erase(this->file_position.begin() + i);
@@ -203,7 +202,7 @@ qic::Result qic::DataBase::flush() {
     if (file.is_open()) {
         file.write(blankDatabase.c_str(), blankDatabase.size());
         file.close();
-        for (int i = 0; i < this->file_position.size(); i++) {
+        for (std::size_t i = 0; i < this->file_position.size(); i++) {
             std::filesystem::remove(this->file_position.at(i));
         }
         file_position.clear();
@@ -215,7 +214,7 @@ qic::Result qic::DataBase::flush() {
 std::vector<std::string> qic::DataBase::getAllTables() {
     std::vector<std::string> tables;
     std::string table;
-    for (int i = 0; i < this->file_position.size(); i++) {
+    for (std::size_t i = 0; i < this->file_position.size(); i++) {
         table = file_position.at(i);
         table.erase(table.size() - 4,4);
         tables.push_back(table);
@@ -225,7 +224,7 @@ std::vector<std::string> qic::DataBase::getAllTables() {
 
 qic::Result qic::DataBase::addValueToTable(std::string tableName, std::vector<Value> Values) {
     if (this->opened) {
-        for (int i = 0; i < this->file_position.size(); i++) {
+        for (std::size_t i = 0; i < this->file_position.size(); i++) {
             if (file_position.at(i) == tableName + ".qic") {
                 std::string insertion;
                 insertion += "\nfrom-" + tableName + " {";
@@ -261,13 +260,13 @@ qic::Result qic::DataBase::addValueToTable(std::string tableName, std::vector<Va
                     }
                 }
                 if (acceptedData.size() == Values.size()) {
-                    for (int j = 0; j < acceptedData.size(); j++ ) {
+                    for (std::size_t j = 0; j < acceptedData.size(); j++ ) {
                         if (acceptedData.at(j) != Values.at(j).getType()) {
                             return qic::QIC_FAILED;
                         }
                     }
                 }
-                for (int j = 0; j <Values.size(); j++) {
+                for (std::size_t j = 0; j <Values.size(); j++) {
                     insertion += "\n";
                     if (Values.at(j).getType() == String) {
                         if (Values.at(j).get_string_value().contains("}.")) {
@@ -311,7 +310,7 @@ qic::Result qic::DataBase::addValueToTable(std::string tableName, std::vector<Va
 qic::Result qic::DataBase::eraseValuesFromTable(std::string table, std::vector<Value> value) {
     std::string insertion;
     insertion += "\nfrom-" + table + " {";
-    for (int j = 0; j <value.size(); j++) {
+    for (std::size_t j = 0; j <value.size(); j++) {
         insertion += "\n";
         if (value.at(j).getType() == String) {
             if (value.at(j).get_string_value().contains("}.")) {
@@ -340,7 +339,7 @@ qic::Result qic::DataBase::eraseValuesFromTable(std::string table, std::vector<V
     insertion += "\n";
     insertion += "}";
     std::vector<std::string> tables = this->getAllTables();
-    for (int i = 0; i < tables.size(); i++) {
+    for (std::size_t i = 0; i < tables.size(); i++) {
         if (tables.at(i) == table) {
             std::string line;
             std::ifstream inFile{table + ".qic"};
@@ -354,7 +353,7 @@ qic::Result qic::DataBase::eraseValuesFromTable(std::string table, std::vector<V
                     bool matches = true;
                     std::getline(compare, compareLine);
                     std::getline(compare, compareLine);
-                    for (int j = 2; std::getline(inFile, line) && std::getline(compare, compareLine); j++) {
+                    for (; std::getline(inFile, line) && std::getline(compare, compareLine);) {
                         if (line != compareLine) {
                             matches = false;
                         }
@@ -388,7 +387,7 @@ qic::Result qic::DataBase::eraseValuesFromTable(std::string table, std::vector<V
 qic::Result qic::DataBase::eraseValuesFromTableWithLimit(std::string table, std::vector<Value> value, int limit) {
     std::string insertion;
     insertion += "\nfrom-" + table + " {";
-    for (int j = 0; j <value.size(); j++) {
+    for (std::size_t j = 0; j <value.size(); j++) {
         insertion += "\n";
         if (value.at(j).getType() == String) {
             if (value.at(j).get_string_value().contains("}.")) {
@@ -417,7 +416,7 @@ qic::Result qic::DataBase::eraseValuesFromTableWithLimit(std::string table, std:
     insertion += "\n";
     insertion += "}";
     std::vector<std::string> tables = this->getAllTables();
-    for (int i = 0; i < tables.size(); i++) {
+    for (std::size_t i = 0; i < tables.size(); i++) {
         if (tables.at(i) == table) {
             std::string line;
             std::ifstream inFile{table + ".qic"};
@@ -431,7 +430,7 @@ qic::Result qic::DataBase::eraseValuesFromTableWithLimit(std::string table, std:
                     bool matches = true;
                     std::getline(compare, compareLine);
                     std::getline(compare, compareLine);
-                    for (int j = 2; std::getline(inFile, line) && std::getline(compare, compareLine); j++) {
+                    for (;std::getline(inFile, line) && std::getline(compare, compareLine);) {
                         if (line != compareLine) {
                             matches = false;
                         }
@@ -471,12 +470,11 @@ qic::Result qic::DataBase::eraseValuesFromTableWithLimit(std::string table, std:
 std::vector<std::vector<qic::Value>> qic::DataBase::getAllValuesFromTable(std::string table) {
     std::vector<std::string> tablesList = this->getAllTables();
     std::vector<std::vector<qic::Value>> finalVec;
-    for (int i = 0; i < tablesList.size(); i++ ) {
+    for (std::size_t i = 0; i < tablesList.size(); i++ ) {
         if (tablesList.at(i) == table) {
             std::ifstream inFile{table + ".qic"};
             bool scanningTable = false;
             bool alredyScannedTable = false;
-            bool scanningValues = false;
             std::string line;
             while (std::getline(inFile,line)) {
                 if (line == "table-" + table  + " {") {
@@ -538,4 +536,5 @@ std::vector<std::vector<qic::Value>> qic::DataBase::getAllValuesFromTable(std::s
             return finalVec;
         }
     }
+    return finalVec;
 }
