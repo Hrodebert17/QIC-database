@@ -3,7 +3,7 @@
 #include <fstream>
 #include <filesystem>
 
-const int version[3] = {0,10,3};
+const int version[3] = {0,10,4};
 
 std::string qic::Version() {
     std::string version_str;
