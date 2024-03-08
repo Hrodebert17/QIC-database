@@ -11,7 +11,7 @@ std::string qic::Version() {
     version_str += ".";
     version_str += std::to_string(version[1]);
     version_str += ".";
-    version_str += std::to_string(version[3);
+    version_str += std::to_string(version[3]);
     return version_str;
 }
 
