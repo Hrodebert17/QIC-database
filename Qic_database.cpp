@@ -11,7 +11,7 @@ std::string qic::Version() {
     version_str += ".";
     version_str += std::to_string(version[1]);
     version_str += ".";
-    version_str += std::to_string(version[2]);
+    version_str += std::to_string(version[3);
     return version_str;
 }
 
@@ -39,7 +39,15 @@ qic::Result qic::DataBase::open() {
                     table_name.erase(0, 6);
                     table_name.erase(table_name.size() - 2, 2);
                     tableFile.open(table_name + ".qic");
-                    file_position.push_back(table_name + ".qic");
+                    bool allow = true;
+                    for (auto file : this->file_position) {
+                        if (file == table_name + ".qic") {
+                            allow = false;
+                        }
+                    }
+                    if (allow) {
+                        file_position.push_back(table_name + ".qic");
+                    }
                 }
                 if (scanningTable) {
                     tableFile.write(line.c_str(), line.size());
