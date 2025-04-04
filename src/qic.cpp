@@ -1,7 +1,14 @@
 #include "qic.h"
 #include "libs/HBZPack/hbz.h"
+#include <any>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
 
 void data_base::open_database(std::filesystem::path path) {
   if (std::filesystem::exists(path)) {
@@ -27,7 +34,9 @@ void data_base::open_database(std::filesystem::path path) {
         if (content.path().extension() == ".table") {
           // if the element has the .table extension which is for
           // the qic table extension we will add it to a map
-          this->tables[content.path().stem()] = content.path();
+          this->tables[content.path().stem()] = std::make_pair(
+              content.path(),
+              std::vector<std::unordered_map<std::string, std::any>>());
         }
       }
     }
@@ -114,7 +123,8 @@ data_base::add_table(std::string name,
         // database then we can tell it that the file we just created is also a
         // table
         this->content.push_back(this->path / (name + ".table"));
-        this->tables[name] = this->path / (name + ".table");
+        this->tables[name] = std::make_pair(
+            name, std::vector<std::unordered_map<std::string, std::any>>());
         // after all of it we can return a success operation
         returnValue.stat = SUCCESS;
       } else {
@@ -126,6 +136,193 @@ data_base::add_table(std::string name,
     std::filesystem::current_path(current);
   } else {
     returnValue.error = "Database not open";
+  }
+  return returnValue;
+}
+
+operation data_base::remove_table(std::string name) {
+  operation returnValue;
+  returnValue.stat = FAILED;
+  // In order to create a table we need the db to be open
+  if (this->open) {
+    // we then move inside the database folder and check if the table exists
+    std::filesystem::path current(std::filesystem::current_path());
+    std::filesystem::current_path(this->path);
+    if (std::filesystem::exists(this->path / (name + ".table"))) {
+      std::filesystem::remove(this->path / (name + ".table"));
+      this->tables.erase(name);
+      returnValue.stat = SUCCESS;
+    } else {
+      returnValue.error = "Table does not exists";
+    }
+    std::filesystem::current_path(current);
+  } else {
+    returnValue.error = "Database not open";
+  }
+  return returnValue;
+}
+
+operation
+data_base::add_value(std::string table,
+                     std::unordered_map<std::string, std::any> values) {
+  operation returnValue;
+  returnValue.stat = FAILED;
+
+  // In order to create a table we need the db to be open
+  if (this->open) {
+    // we then move inside the database folder and check if the table exists
+    std::filesystem::path current(std::filesystem::current_path());
+    std::filesystem::current_path(this->path);
+    if (std::filesystem::exists(this->path / (table + ".table"))) {
+      this->tables[table].second.push_back(values);
+      returnValue.stat = SUCCESS;
+      returnValue.error = "New elements added to the table";
+    } else {
+      returnValue.error = "Table does not exists";
+    }
+    std::filesystem::current_path(current);
+  } else {
+    returnValue.error = "Database not open";
+  }
+  return returnValue;
+}
+
+std::shared_ptr<std::vector<std::unordered_map<std::string, std::any>>>
+data_base::get_values_from_table(std::string table) {
+  // In order to create a table we need the db to be open
+  if (this->open) {
+    // we then move inside the database folder and check if the table exists
+    std::filesystem::path current(std::filesystem::current_path());
+    std::filesystem::current_path(this->path);
+    if (std::filesystem::exists(this->path / (table + ".table"))) {
+      return std::make_shared<
+          std::vector<std::unordered_map<std::string, std::any>>>(
+          this->tables[table].second);
+    }
+    std::filesystem::current_path(current);
+  }
+  return std::nullptr_t();
+}
+
+void data_base::save() {
+  std::cout << "hi";
+  for (auto table : this->tables) {
+    // In order to create a table we need the db to be open
+    auto type = this->get_table_content_header(table.first);
+    if (this->open) {
+      // we then move inside the database folder and check if the table exists
+      std::filesystem::path current(std::filesystem::current_path());
+      std::filesystem::current_path(this->path);
+      if (std::filesystem::exists(this->path / (table.first + ".table"))) {
+        std::ifstream ifFile(this->path / (table.first + ".table"));
+        if (ifFile.is_open()) {
+          std::string line;
+          std::string content;
+          while (std::getline(ifFile, line)) {
+            bool is_first = false;
+            if (content.empty()) {
+              is_first = true;
+            }
+            if (!is_first) {
+              content += "\n";
+            }
+            content += line;
+            if (line == "}") {
+              break;
+            }
+          }
+          for (auto table_values : table.second.second) {
+            content += "\n[";
+            for (auto collumn_values : table_values) {
+              content += "\n";
+              content += collumn_values.first + " : ";
+              data_type t = type[std::string(collumn_values.first)];
+              if (t == INT) {
+                content +=
+                    std::to_string(std::any_cast<int>(collumn_values.second));
+              }
+              if (t == DOUBLE) {
+                content += std::to_string(
+                    std::any_cast<double>(collumn_values.second));
+              }
+              if (t == FLOAT) {
+                content +=
+                    std::to_string(std::any_cast<float>(collumn_values.second));
+              }
+              if (t == STRING) {
+                content +=
+                    compress(std::any_cast<std::string>(collumn_values.second));
+              }
+              if (t == BOOL) {
+                content +=
+                    std::to_string(std::any_cast<bool>(collumn_values.second));
+              }
+            }
+            content += "\n]";
+          }
+          ifFile.close();
+          std::ofstream offFile(this->path / (table.first + ".table"));
+          if (offFile.is_open()) {
+            offFile.write(content.c_str(), content.size());
+            offFile.close();
+          }
+        }
+        std::filesystem::current_path(current);
+      }
+    }
+  }
+}
+
+std::unordered_map<std::string, data_type>
+data_base::get_table_content_header(std::string name) {
+  std::unordered_map<std::string, data_type> returnValue;
+  if (this->open) {
+    // we then move inside the database folder and check if the table exists
+    std::filesystem::path current(std::filesystem::current_path());
+    std::filesystem::current_path(this->path);
+    if (std::filesystem::exists(this->path / (name + ".table"))) {
+      // as the table does not exist we can go on and create the table file
+      std::ifstream ifFile(this->path / (name + ".table"));
+      std::string line;
+      while (std::getline(ifFile, line)) {
+        if (line[0] == '}') {
+          break;
+        } else if (line[0] == '{') {
+          continue;
+        }
+        std::string name;
+        std::string type;
+        bool split = false;
+        for (auto c : line) {
+          if (c == ':') {
+            split = true;
+            continue;
+          }
+          if (c == ' ') {
+            continue;
+          }
+          if (split) {
+            type += c;
+          } else {
+            name += c;
+          }
+        }
+        data_type dt;
+        if (type == "bool") {
+          dt = BOOL;
+        } else if (type == "int") {
+          dt = INT;
+        } else if (type == "double") {
+          dt = DOUBLE;
+        } else if (type == "string") {
+          dt = STRING;
+        }
+        returnValue[name] = dt;
+      }
+    } else {
+    }
+    std::filesystem::current_path(current);
+  } else {
   }
   return returnValue;
 }
