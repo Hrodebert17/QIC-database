@@ -17,6 +17,8 @@ struct operation {
 
 class data_base {
 public:
+  int compiling_threads = 2;
+
   void open_database(std::filesystem::path dbPath);
   void close();
   operation add_table(std::string name,

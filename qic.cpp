@@ -4,12 +4,47 @@
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
-#include <memory>
+#include <iostream>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
+std::mutex content_mutex;
+void handleThread(size_t start, size_t end, std::string &content,
+                  std::vector<std::unordered_map<std::string, std::any>> *table,
+                  std::unordered_map<std::string, data_type> *type) {
+  ;
+  for (size_t i = start; i < end; i++) {
+    std::stringstream local;
+    local << "\n[";
+
+    auto table_values = table->at(i);
+    for (auto &column : table_values) {
+      local << "\n" << column.first << " : ";
+      data_type t = (*type)[column.first];
+
+      if (t == INT)
+        local << std::to_string(std::any_cast<int>(column.second));
+      else if (t == DOUBLE)
+        local << std::to_string(std::any_cast<double>(column.second));
+      else if (t == FLOAT)
+        local << std::to_string(std::any_cast<float>(column.second));
+      else if (t == STRING)
+        local << compress(std::any_cast<std::string>(column.second));
+      else if (t == BOOL)
+        local << std::to_string(std::any_cast<bool>(column.second));
+    }
+
+    local << "\n]";
+
+    // SAFELY write to shared content
+    std::lock_guard<std::mutex> lock(content_mutex);
+    content += local.str();
+  }
+}
 void data_base::open_database(std::filesystem::path path) {
   if (std::filesystem::exists(path)) {
     // creates the temp folder and copy the database inside of it
@@ -113,15 +148,15 @@ data_base::add_table(std::string name,
       // as the table does not exist we can go on and create the table file
       std::ofstream offFile(this->path / (name + ".table"));
       if (offFile.is_open()) {
-        // we call the function to generate a header (important info in the head
-        // of the file) for the table and then save it into the file
+        // we call the function to generate a header (important info in the
+        // head of the file) for the table and then save it into the file
         std::string fileContent = this->build_table_header_from_map(content);
         offFile.write(fileContent.c_str(), fileContent.size());
         offFile.close();
         // after saving the file we also have to tell the database about this
         // table firstly it needs to know about the file being part of the
-        // database then we can tell it that the file we just created is also a
-        // table
+        // database then we can tell it that the file we just created is also
+        // a table
         this->content.push_back(this->path / (name + ".table"));
         this->tables[name] = std::make_pair(
             name, std::vector<std::unordered_map<std::string, std::any>>());
@@ -219,35 +254,32 @@ void data_base::save() {
               break;
             }
           }
-          for (auto table_values : table.second.second) {
-            content += "\n[";
-            for (auto collumn_values : table_values) {
-              content += "\n";
-              content += collumn_values.first + " : ";
-              data_type t = type[std::string(collumn_values.first)];
-              if (t == INT) {
-                content +=
-                    std::to_string(std::any_cast<int>(collumn_values.second));
-              }
-              if (t == DOUBLE) {
-                content += std::to_string(
-                    std::any_cast<double>(collumn_values.second));
-              }
-              if (t == FLOAT) {
-                content +=
-                    std::to_string(std::any_cast<float>(collumn_values.second));
-              }
-              if (t == STRING) {
-                content +=
-                    compress(std::any_cast<std::string>(collumn_values.second));
-              }
-              if (t == BOOL) {
-                content +=
-                    std::to_string(std::any_cast<bool>(collumn_values.second));
-              }
-            }
-            content += "\n]";
+          auto tables = table.second.second;
+          auto size = tables.size();
+          if (size == 0) {
+            continue;
           }
+          int thread_to_use = this->compiling_threads;
+          while (thread_to_use > size) {
+            thread_to_use -= 1;
+          }
+          while (size % thread_to_use != 0) {
+            thread_to_use -= 1;
+          }
+          size_t chunkSize = size / thread_to_use;
+          std::vector<std::thread> threads;
+          for (int i = 0; i < thread_to_use; i++) {
+            size_t start = i * chunkSize;
+            size_t end = (i + 1) * chunkSize;
+            std::cout << "thread number: " << i << " created." << std::endl;
+            threads.emplace_back([start, end, &content, &tables, &type]() {
+              handleThread(start, end, content, &tables, &type);
+            });
+          }
+          for (int i = 0; i < threads.size(); i++) {
+            threads.at(i).join();
+          }
+
           ifFile.close();
           std::ofstream offFile(this->path / (table.first + ".table"));
           if (offFile.is_open()) {
