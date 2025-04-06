@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -60,8 +61,7 @@ void data_base::open_database(std::filesystem::path path) {
 
     // we then remove the temp file we created before
     std::filesystem::remove(temp.string() / path);
-
-    // we scan for tables
+    this->tables_ptr = std::make_shared<table_container>();
     for (auto content : std::filesystem::recursive_directory_iterator(temp)) {
       if (!content.is_directory()) {
         // we save each element so we can compress it later
@@ -69,7 +69,7 @@ void data_base::open_database(std::filesystem::path path) {
         if (content.path().extension() == ".table") {
           // if the element has the .table extension which is for
           // the qic table extension we will add it to a map
-          this->tables[content.path().stem()] = std::make_pair(
+          this->tables_ptr->operator[](content.path().stem()) = std::make_pair(
               content.path(),
               std::vector<std::unordered_map<std::string, std::any>>());
         }
@@ -87,17 +87,17 @@ void data_base::open_database(std::filesystem::path path) {
 void data_base::close() {
   if (std::filesystem::exists(this->path)) {
     std::filesystem::path current(std::filesystem::current_path());
+    if (std::filesystem::exists(this->db.filename().string())) {
+      std::filesystem::remove(this->db.filename().string());
+    }
     std::filesystem::current_path(this->path);
     std::vector<std::string> filePaths;
     for (auto path : this->content) {
       filePaths.push_back(path.string());
     }
+
     compressFiles(filePaths, this->db.filename().string());
     std::filesystem::current_path(current);
-
-    if (std::filesystem::exists(this->db)) {
-      std::filesystem::remove(this->db);
-    }
     std::filesystem::copy(this->path / (this->db.filename().string()), current);
     std::filesystem::remove_all(this->path);
     this->open = false;
@@ -158,8 +158,7 @@ data_base::add_table(std::string name,
         // database then we can tell it that the file we just created is also
         // a table
         this->content.push_back(this->path / (name + ".table"));
-        this->tables[name] = std::make_pair(
-            name, std::vector<std::unordered_map<std::string, std::any>>());
+        this->tables_ptr->operator[](name) = std::make_pair(name, table_vec());
         // after all of it we can return a success operation
         returnValue.stat = SUCCESS;
       } else {
@@ -185,7 +184,7 @@ operation data_base::remove_table(std::string name) {
     std::filesystem::current_path(this->path);
     if (std::filesystem::exists(this->path / (name + ".table"))) {
       std::filesystem::remove(this->path / (name + ".table"));
-      this->tables.erase(name);
+      this->tables_ptr->erase(name);
       returnValue.stat = SUCCESS;
     } else {
       returnValue.error = "Table does not exists";
@@ -209,7 +208,7 @@ data_base::add_value(std::string table,
     std::filesystem::path current(std::filesystem::current_path());
     std::filesystem::current_path(this->path);
     if (std::filesystem::exists(this->path / (table + ".table"))) {
-      this->tables[table].second.push_back(values);
+      this->tables_ptr->operator[](table).second.push_back(values);
       returnValue.stat = SUCCESS;
       returnValue.error = "New elements added to the table";
     } else {
@@ -222,20 +221,20 @@ data_base::add_value(std::string table,
   return returnValue;
 }
 
-std::vector<std::unordered_map<std::string, std::any>> *
-data_base::get_values_from_table(std::string table) {
+table_vec *data_base::get_values_from_table(std::string table) {
   // In order to create a table we need the db to be open
-  return &(this->tables[table].second);
+  return &(this->tables_ptr->operator[](table).second);
 }
 
 void data_base::save() {
-  for (auto table : this->tables) {
+  std::filesystem::path current(std::filesystem::current_path());
+  std::filesystem::current_path(this->path);
+  for (auto table : *this->tables_ptr) {
     // In order to create a table we need the db to be open
     auto type = this->get_table_content_header(table.first);
     if (this->open) {
       // we then move inside the database folder and check if the table exists
-      std::filesystem::path current(std::filesystem::current_path());
-      std::filesystem::current_path(this->path);
+
       if (std::filesystem::exists(this->path / (table.first + ".table"))) {
         std::ifstream ifFile(this->path / (table.first + ".table"));
         if (ifFile.is_open()) {
@@ -271,7 +270,6 @@ void data_base::save() {
           for (int i = 0; i < thread_to_use; i++) {
             size_t start = i * chunkSize;
             size_t end = (i + 1) * chunkSize;
-            std::cout << "thread number: " << i << " created." << std::endl;
             threads.emplace_back([start, end, &content, &tables, &type]() {
               handleThread(start, end, content, &tables, &type);
             });
@@ -279,7 +277,6 @@ void data_base::save() {
           for (int i = 0; i < threads.size(); i++) {
             threads.at(i).join();
           }
-
           ifFile.close();
           std::ofstream offFile(this->path / (table.first + ".table"));
           if (offFile.is_open()) {
@@ -287,10 +284,10 @@ void data_base::save() {
             offFile.close();
           }
         }
-        std::filesystem::current_path(current);
       }
     }
   }
+  std::filesystem::current_path(current);
 }
 
 std::unordered_map<std::string, data_type>
@@ -385,37 +382,29 @@ operation data_base::load_table(std::string table) {
                 val += c;
               }
             }
+            // Access and modify the element in tables_ptr
+            auto &current_table = this->tables_ptr->operator[](table);
+
             if (types[name] == STRING) {
-              val = decompressString(val);
-              this->tables[table]
-                  .second[this->tables[table].second.size() - 1][name] =
+              current_table.second[current_table.second.size() - 1][name] =
                   std::any(val);
             } else if (types[name] == INT) {
-              this->tables[table]
-                  .second[this->tables[table].second.size() - 1][name] =
+              current_table.second[current_table.second.size() - 1][name] =
                   std::any(std::stoi(val));
             } else if (types[name] == DOUBLE) {
-              this->tables[table]
-                  .second[this->tables[table].second.size() - 1][name] =
+              current_table.second[current_table.second.size() - 1][name] =
                   std::any(std::stod(val));
             } else if (types[name] == FLOAT) {
-              this->tables[table]
-                  .second[this->tables[table].second.size() - 1][name] =
+              current_table.second[current_table.second.size() - 1][name] =
                   std::any(std::stof(val));
             } else if (types[name] == BOOL) {
-              bool finalVal;
-              if (val == "1") {
-                finalVal = true;
-              } else {
-                finalVal = false;
-              }
-              this->tables[table]
-                  .second[this->tables[table].second.size() - 1][name] =
+              bool finalVal = (val == "1");
+              current_table.second[current_table.second.size() - 1][name] =
                   std::any(finalVal);
             }
           } else {
             if (line == "[") {
-              this->tables[table].second.push_back(
+              this->tables_ptr->operator[](table).second.push_back(
                   std::unordered_map<std::string, std::any>());
               scanning = true;
             }
