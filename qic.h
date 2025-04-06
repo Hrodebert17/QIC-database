@@ -64,7 +64,7 @@ public:
   operation load_table(std::string table);
   std::unordered_map<std::string, data_type>
   get_table_content_header(std::string table);
-  std::shared_ptr<table_container> container_executer() {
+  std::shared_ptr<table_container> container_execute() {
     this->tables_ptr->type_for_tables.clear();
     for (auto t : *this->tables_ptr) {
       this->tables_ptr->type_for_tables[t.first] =
