@@ -86,7 +86,7 @@ table_container *table_container::where(std::string value, std::any is,
       }
     }
   }
-  for (int i = 0; i < 0; i++) {
+  for (int i = 0; i < toErase.size(); i++) {
     this->returnValue.erase(this->returnValue.begin() + toErase.at(i) - i);
   }
   return this;
