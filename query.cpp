@@ -13,6 +13,7 @@ table_container::table_container(table_container &copy) {
 }
 
 table_container *table_container::select(std::string number) {
+  this->type = SELECT;
   if (number == "*") {
     this->selector = 0;
   } else {
