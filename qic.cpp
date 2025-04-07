@@ -257,27 +257,26 @@ void data_base::save() {
           }
           auto tables = table.second.second;
           auto size = tables.size();
-          if (size == 0) {
-            continue;
-          }
           int thread_to_use = this->compiling_threads;
           while (thread_to_use > size) {
             thread_to_use -= 1;
           }
-          while (size % thread_to_use != 0) {
-            thread_to_use -= 1;
-          }
-          size_t chunkSize = size / thread_to_use;
-          std::vector<std::thread> threads;
-          for (int i = 0; i < thread_to_use; i++) {
-            size_t start = i * chunkSize;
-            size_t end = (i + 1) * chunkSize;
-            threads.emplace_back([start, end, &content, &tables, &type]() {
-              handleThread(start, end, content, &tables, &type);
-            });
-          }
-          for (int i = 0; i < threads.size(); i++) {
-            threads.at(i).join();
+          if (size != 0) {
+            while (size % thread_to_use != 0) {
+              thread_to_use -= 1;
+            }
+            size_t chunkSize = size / thread_to_use;
+            std::vector<std::thread> threads;
+            for (int i = 0; i < thread_to_use; i++) {
+              size_t start = i * chunkSize;
+              size_t end = (i + 1) * chunkSize;
+              threads.emplace_back([start, end, &content, &tables, &type]() {
+                  handleThread(start, end, content, &tables, &type);
+              });
+            }
+            for (int i = 0; i < threads.size(); i++) {
+              threads.at(i).join();
+            }
           }
           ifFile.close();
           std::ofstream offFile(this->path / (table.first + ".table"));
