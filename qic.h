@@ -15,7 +15,6 @@ enum query_type { DELETE, SELECT };
 
 typedef std::unordered_map<std::string, std::any> table_value;
 typedef std::vector<std::unordered_map<std::string, std::any>> table_vec;
-
 class data_base;
 
 class table_container
@@ -42,6 +41,7 @@ private:
   std::vector<std::pair<int, table_value>> returnValue;
 };
 
+table_vec parse_and_execute(data_base *db, std::string &input_string);
 struct operation {
   status stat;
   std::string error;
