@@ -387,7 +387,7 @@ operation data_base::load_table(std::string table) {
 
             if (types[name] == STRING) {
               current_table.second[current_table.second.size() - 1][name] =
-                  std::any(val);
+                  std::any(decompressString(val));
             } else if (types[name] == INT) {
               current_table.second[current_table.second.size() - 1][name] =
                   std::any(std::stoi(val));
